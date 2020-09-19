@@ -41,6 +41,7 @@ class point_u32: public xy<uint32_t>{
 public:
     point_u32(uint32_t set_x, uint32_t set_y);
     point_u32(point_u32 *old);
+    inline void copy_from_old(point_u32 *old);
     inline void add_delta(xy<int> *delta);
     inline void update_H16_BL8(H16_BL8 *upd);
 };

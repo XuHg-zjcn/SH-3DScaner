@@ -46,20 +46,16 @@ import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.util.Log;
-import android.util.Range;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
-import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.view.menu.BaseMenuPresenter;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
@@ -74,8 +70,6 @@ import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-
-import com.example.sh3dscaner.ImageProcess;
 
 public class Camera2BasicFragment extends Fragment {
 
@@ -94,14 +88,13 @@ public class Camera2BasicFragment extends Fragment {
     private Size mPreviewSize;
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private CaptureRequest mPreviewRequest;
-    private Canvas mCanvas;
     private Bitmap bmp;
     private Rect mRect;
     private Paint mPaint;
     private boolean draw_thread_is_running=true;
     //private Object sync = new Object();
     private Semaphore mSemp = new Semaphore(1);
-    timer_count tc = new timer_count(100);
+    private timer_count tc = new timer_count(100);
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final String FRAGMENT_DIALOG = "dialog";
@@ -240,6 +233,7 @@ public class Camera2BasicFragment extends Fragment {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
+            Log.i(TAG, "Camera onDisconnected");
         }
 
         @Override
@@ -287,6 +281,13 @@ public class Camera2BasicFragment extends Fragment {
     public void onPause() {
         closeCamera();
         stopBackgroundThread();
+        draw_thread_is_running = false;
+        try {
+            thread_draw.join(500);
+        }
+        catch(InterruptedException e) {
+            e.printStackTrace();
+        }
         super.onPause();
     }
 
@@ -667,50 +668,49 @@ public class Camera2BasicFragment extends Fragment {
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener2
             = new ImageReader.OnImageAvailableListener() {
         private ReentrantLock lock = new ReentrantLock();
-        ByteBuffer y;
-        Image image;
         @Override
         public void onImageAvailable(ImageReader reader) {
-            image = reader.acquireNextImage();
-            if (image == null) {
-                Log.e(TAG, "image == null");
+            boolean locked_OK = lock.tryLock();
+            if(!locked_OK) {
+                Log.w(TAG, "onImageAvailable is ready run");
                 return;
             }
-            lock.lock();
-            y = image.getPlanes()[0].getBuffer();
+            Image image =  reader.acquireLatestImage();
+            ByteBuffer y = image.getPlanes()[0].getBuffer();
             if (y == null) {
-                Log.e(TAG, "ByteBuffer == null");
+                Log.e(TAG, "image||y == null");
                 return;
             }
             tc.time_start();
             ImageProcess.update(y);
-            lock.unlock();
+            y.clear();
             image.close();
+
             if (mSemp.availablePermits() == 0) {
                 mSemp.release();
             }else{
-                Log.e(TAG, "mSemp timeout");
-                return;
+                Log.e(TAG, "mSemp.availablePermits() == 0");
             }
             tc.time_end();
+            lock.unlock();
         }
     };
 
     private void Image2View_init() {
         float pi = 3.1415926535f;
-        bmp = Bitmap.createBitmap(mTextureView2.getWidth(), mTextureView2.getHeight(),
-                Bitmap.Config.ARGB_8888); //创建一个和View大小一样的Bitmap
-        mRect = new Rect(0,0,mTextureView2.getWidth(),mTextureView2.getHeight());
+        //use litter image size 100x80 -> 40x40, less CPU time
+        bmp = Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888); //创建与输出尺寸相同的Bitmap
+        mRect = new Rect(0,0, bmp.getWidth(), bmp.getHeight());
         mPaint = new Paint();
         ImageProcess.init_para para = new ImageProcess.init_para();
         para.in_width = mPreviewSize.getWidth();
         para.in_height = mPreviewSize.getWidth();
         para.N_thread = 8;
         para.N_length = 32;
-        para.N_line = 100;
-        para.rad_N = 80;
+        para.N_line = bmp.getHeight();
+        para.rad_N = bmp.getWidth();
         para.rad_start = 0;
-        para.rad_step = pi/80;
+        para.rad_step = pi/40;
         para.start_x = 200;
         para.start_y = 200;
         ImageProcess.jni_init(para, bmp);
@@ -734,9 +734,9 @@ public class Camera2BasicFragment extends Fragment {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                mCanvas = mTextureView2.lockCanvas();
+                Canvas mCanvas = mTextureView2.lockCanvas();
                 assert mCanvas !=null;
-                mCanvas.drawBitmap(bmp,mRect,mRect,mPaint);
+                mCanvas.drawBitmap(bmp, null, mRect, mPaint);
                 mTextureView2.unlockCanvasAndPost(mCanvas);
             }
         }
@@ -747,7 +747,7 @@ public class Camera2BasicFragment extends Fragment {
         private long start_time;
         private long end_time;
         private long last_print_time;
-        private long runed_time=0;
+        private long runed_time=0;  //上次进入if时到现在的累计运行时间
         private long Log_per_count;
         private boolean is_running = false;
         String str;
@@ -771,14 +771,14 @@ public class Camera2BasicFragment extends Fragment {
                 Log.w(TAG, "time_count: no running");
             }
             is_running = false;
-            runed_time += end_time - start_time;
+            runed_time += end_time - start_time; //运行时间
             if(count%Log_per_count == 0) {
                 long all_last = end_time - last_print_time;
                 float duty = (float)runed_time/all_last;
-                //str = String.format("count:%d, time:%dms %fduty%%", count, all_last, duty*100);
-                //showToast(str);
+                str = String.format("count:%d, time:%dms %fduty%%", count, all_last, duty*100);
+                Log.i(TAG, str);
                 last_print_time = end_time;
-                runed_time = 0;
+                runed_time = 0; //清零
             }
         }
     }

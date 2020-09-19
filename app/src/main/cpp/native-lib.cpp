@@ -9,29 +9,24 @@ array2d<uint8_t> *img; //相机照片
 array2d<uint8_t> *tmp; //lines_search结果
 array2d<uint32_t> *bmp;    //输出窗口
 uint32_t *bmp_ptr;
-uint8_t *in_ptr;
 line_search_para *ls_para;
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_sh3dscaner_ImageProcess_update(JNIEnv *env, jclass thiz, jobject img_in) {
     //jlong Buf_Cap = env->GetDirectBufferCapacity(img_in);
     //assert(img->prod() == Buf_Cap);
-    in_ptr = (uint8_t*)env->GetDirectBufferAddress(img_in);
-    update(in_ptr);
-    /*for(uint32_t i=0;i<bmp->x;i++) {
-        for(uint32_t j=0;j<bmp->y;j++) {
-            *bmp->get(i,j) = 0xffff6161;
-            *bmp->get(i,j) = *tmp->get(i,j)*0x00010101 + 0xff000000; //屏蔽这行67%
-        }
-    }*/
-    pthread_mutex_lock(&mutex);
+    auto *in_ptr = (uint8_t*)env->GetDirectBufferAddress(img_in);
+    if(update(in_ptr) != 0) //BUSY
+        return;
+    // TODO: too slow, want change to use OpenGL
+    /*pthread_mutex_lock(&mutex);
     uint32_t *bmp_ptr_tmp = bmp->data;
     uint8_t *tmp_ptr = tmp->data;
     uint64_t prod = bmp->prod();
     for(uint64_t i=0; i<prod; i++) {
         *bmp_ptr_tmp++ = (*tmp_ptr++)*0x00010101 + 0xff000000;
     }
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);*/
 }
 extern "C"
 JNIEXPORT void JNICALL

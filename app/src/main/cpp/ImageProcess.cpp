@@ -18,7 +18,7 @@ pthread_t *threads;
 array2d<uint8_t> *img_in;   //camera image input
 pthread_mutex_t mutex;
 
-point_u32::point_u32(uint32_t set_x, uint32_t set_y): xy<uint32_t>
+point_u32::point_u32(uint32_t set_x, uint32_t set_y):xy<uint32_t>
 {set_x<<16U,set_y<<16U}{}
 
 point_u32::point_u32(point_u32 *old):xy<uint32_t>
@@ -34,6 +34,11 @@ inline void point_u32::update_H16_BL8(H16_BL8 *upd) {
     upd->H16.y = y>>16U;
     upd->BL8.x = (x>>8U)&0xffU;
     upd->BL8.y = (y>>8U)&0xffU;
+}
+
+inline void point_u32::copy_from_old(point_u32 *old) {
+    x = old->x;
+    y = old->y;
 }
 
 //双线性插值 output 16bit 0-65536
@@ -92,7 +97,7 @@ void lines_search(line_search_para &para, array2d<uint8_t> *img)
         delta_line.x = -delta_point.y;
         delta_line.y = delta_point.x;
 
-        point = point_u32(para.start);
+        point.copy_from_old(&para.start);
         uint8_t *ptr = para.out->get(i,0);
         for(int j=(para.N_line).a;j<(para.N_line).b;j++) {
             *ptr++ = line_sum(img, &point, &delta_point, para.N_length);
@@ -119,7 +124,7 @@ void* thread_lines_search(void* args){
 void init(int N_thread, line_search_para *paras, uint32_t in_width, uint32_t in_height) {
     uint32_t range_per_thread;
     pthread_attr_t attr;
-    size_t stacksize;                  //修改栈大小=100kB
+    size_t stacksize;                  //修改栈大小=4kB
     line_search_para *threads_paras;   //每个线程的参数
 
     assert(N_thread>0);                //0<线程数<=50
@@ -130,11 +135,11 @@ void init(int N_thread, line_search_para *paras, uint32_t in_width, uint32_t in_
     threads_running = true;
     img_in = new array2d<uint8_t>(in_width, in_height, false);
     sem_init(&sem, 0, 0); //pthread初始化
-    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&mutex, nullptr);
     threads = (pthread_t*)malloc(sizeof(pthread_t)*N_thread);
     pthread_attr_init(&attr);
     pthread_attr_getstacksize(&attr, &stacksize);
-    stacksize = 100000; //100KB
+    stacksize = 4000; //4KB
     pthread_attr_setstacksize(&attr, stacksize);
     threads_paras = (line_search_para*)malloc(sizeof(line_search_para)*N_thread);
 
@@ -159,11 +164,15 @@ void init(int N_thread, line_search_para *paras, uint32_t in_width, uint32_t in_
 }
 
 int update(uint8_t *img_ptr) {
-  thread_remain=n_thread;
-  img_in->set_ptr(img_ptr);
-  pthread_mutex_lock(&mutex);
-  for(int i=0;i<n_thread;i++) {
+    int sem_value;
+    assert(sem_getvalue(&sem, &sem_value) == 0);
+    if(sem_value != 0)
+        return 1; //BUSY
+    thread_remain=n_thread;
+    img_in->set_ptr(img_ptr);
+    pthread_mutex_lock(&mutex);
+    for(int i=0;i<n_thread;i++) {
       sem_post(&sem);
-  }
-  return 0;
+    }
+    return 0;
 }
