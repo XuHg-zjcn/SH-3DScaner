@@ -2,4 +2,6 @@
     <string name="app_name">SH 3D扫描仪</string>
     <string name="request_permission">申请权限</string>
     <string name="description_info">描述</string>
+    <string name="camera2_api_test">Camera2 API测试</string>
+    <string name="opencv_test">OpenCV测试</string>
 </resources>

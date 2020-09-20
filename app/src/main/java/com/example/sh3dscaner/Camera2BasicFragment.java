@@ -47,6 +47,7 @@ import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
@@ -72,7 +73,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Camera2BasicFragment extends Fragment {
+public class Camera2BasicFragment extends Activity {
 
     private Handler mBackgroundHandler;
     private Handler mBackgroundHandler2;
@@ -160,14 +161,9 @@ public class Camera2BasicFragment extends Fragment {
      * @param text The message to show
      */
     private void showToast(final String text) {
-        final Activity activity = getActivity();
-        assert activity != null;
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(activity, text, Toast.LENGTH_SHORT).show();
-            }
-        });
+        Looper.prepare();
+        Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+        Looper.loop();
     }
 
     /**
@@ -242,24 +238,19 @@ public class Camera2BasicFragment extends Fragment {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
-            Activity activity = getActivity();
-            if (null != activity) {
-                activity.finish();
-            }
+            Log.e(TAG, "mStateCallback onError");
+            finish();
         }
 
     };
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_camera2_basic, container, false);
-    }
-
-    @Override
-    public void onViewCreated(final View view, Bundle savedInstanceState) {
-        mTextureView = (AutoFitTextureView)view.findViewById(R.id.texture);
-        mTextureView2 = (TextureView)view.findViewById(R.id.texture2);
+    public void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "into camera2 view");
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.fragment_camera2_basic);
+        mTextureView = findViewById(R.id.texture);
+        mTextureView2 = findViewById(R.id.texture2);
     }
 
     @Override
@@ -294,7 +285,7 @@ public class Camera2BasicFragment extends Fragment {
 
     private void requestCameraPermission() {
         if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-            new ConfirmationDialog().show(getChildFragmentManager(), FRAGMENT_DIALOG);
+            showToast("shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)==true");
         } else {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
         }
@@ -320,9 +311,7 @@ public class Camera2BasicFragment extends Fragment {
      */
     @SuppressWarnings("SuspiciousNameCombination")
     private void setUpCameraOutputs(int width, int height) {
-        Activity activity = getActivity();
-        assert activity != null;
-        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        CameraManager manager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics
@@ -349,7 +338,7 @@ public class Camera2BasicFragment extends Fragment {
                 //        mOnImageAvailableListener, mBackgroundHandler);
                 // Find out if we need to swap dimension to get the preview size relative to sensor
                 // coordinate.
-                int displayRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+                int displayRotation = this.getWindowManager().getDefaultDisplay().getRotation();
                 //noinspection ConstantConditions
                 int mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
                 boolean swappedDimensions = false;
@@ -371,7 +360,7 @@ public class Camera2BasicFragment extends Fragment {
                 }
 
                 Point displaySize = new Point();
-                activity.getWindowManager().getDefaultDisplay().getSize(displaySize);
+                this.getWindowManager().getDefaultDisplay().getSize(displaySize);
                 int rotatedPreviewWidth = width;
                 int rotatedPreviewHeight = height;
                 int maxPreviewWidth = displaySize.x;
@@ -434,15 +423,14 @@ public class Camera2BasicFragment extends Fragment {
      * Opens the camera specified by {@link Camera2BasicFragment#mCameraId}.
      */
     private void openCamera(int width, int height) {
-        if (ContextCompat.checkSelfPermission(Objects.requireNonNull(getActivity()), Manifest.permission.CAMERA)
+        if (ContextCompat.checkSelfPermission(Objects.requireNonNull(getApplicationContext()), Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             requestCameraPermission();
             return;
         }
         setUpCameraOutputs(width, height);
         //configureTransform(width, height);
-        Activity activity = getActivity();
-        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        CameraManager manager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
         try {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
