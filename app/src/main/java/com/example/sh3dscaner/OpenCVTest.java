@@ -21,6 +21,7 @@ import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
@@ -40,20 +41,17 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean              mIsJavaCamera = true;
     private MenuItem             mItemSwitchCamera = null;
+    private Mat img_old, img_new;
+    private Mat hist2d;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    Log.i(TAG, "OpenCV loaded successfully");
-                    mOpenCvCameraView.enableView();
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
+            if (status == LoaderCallbackInterface.SUCCESS) {
+                Log.i(TAG, "OpenCV loaded successfully");
+                mOpenCvCameraView.enableView();
+            } else {
+                super.onManagerConnected(status);
             }
         }
     };
@@ -68,13 +66,9 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
         setContentView(R.layout.opencv_test);
-
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial1_activity_java_surface_view);
-
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 
@@ -111,12 +105,23 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     }
 
     public void onCameraViewStarted(int width, int height) {
+        img_old = new Mat(height, width, CvType.CV_8UC4);
+        img_new = new Mat(height, width, CvType.CV_8UC4);
+        hist2d = new Mat(256, 256, CvType.CV_16UC4);
     }
 
     public void onCameraViewStopped() {
+        img_old.release();
+        img_new.release();
+        hist2d.release();
     }
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        return inputFrame.rgba();
+        img_new =  inputFrame.rgba();
+        ImageProcess.frame_hist2d(img_old.getNativeObjAddr(),
+                                  img_new.getNativeObjAddr(),
+                                  hist2d.getNativeObjAddr());
+        img_old = img_new;
+        return img_new;
     }
 }
