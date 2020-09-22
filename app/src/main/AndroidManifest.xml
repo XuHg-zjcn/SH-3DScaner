@@ -18,7 +18,9 @@
             </intent-filter>
         </activity>
         <activity android:name=".Camera2BasicFragment"/>
-        <activity android:name=".OpenCVTest"/>
+        <activity android:name=".OpenCVTest"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:screenOrientation="landscape"/>
     </application>
 
 </manifest>
