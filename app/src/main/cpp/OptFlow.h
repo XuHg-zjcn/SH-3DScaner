@@ -53,7 +53,7 @@ private:
 public:
     OptFlow(int rows, int cols);
     void getFeat(Mat &img);
-    void update(Mat &img);
+    long update(Mat &img);
 };
 
 

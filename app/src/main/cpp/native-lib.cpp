@@ -22,8 +22,9 @@
 #include <mutex>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <ctime>
 using namespace cv;
-
+using namespace std;
 array2d<uint8_t> *img; //相机照片
 array2d<uint8_t> *tmp; //lines_search结果
 array2d<uint32_t> *bmp;    //输出窗口
@@ -138,15 +139,24 @@ Java_com_example_sh3dscaner_ImageProcess_frame_1hist2d(JNIEnv *env, jclass clazz
 }
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz, jlong mat_addr) {
+Java_com_example_sh3dscaner_ImageProcess_OptFlow_1init(JNIEnv *env, jclass clazz,
+            jint rows, jint cols) {
+    optflow = new OptFlow(rows, cols);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz,
+        jlong mat_addr, jobject status) {
+    long t_ns;
+    jfieldID id;
+    jclass c = env->FindClass("com/example/sh3dscaner/ImageProcess$Status");
+    id = env->GetFieldID(c, "process_time", "J");
     Mat& mat = *(Mat*)mat_addr;
-    if(N_frames == 0) {
-        optflow = new OptFlow(mat.rows, mat.cols);
+    if(N_frames%30 == 0)
         optflow->getFeat(mat);
-    }else if(N_frames % 30 == 0){
-        optflow->getFeat(mat);
-    }else{
-        optflow->update(mat);
+    else{
+        t_ns=optflow->update(mat);
+        env->SetLongField(status, id, t_ns);
     }
     N_frames += 1;
 }

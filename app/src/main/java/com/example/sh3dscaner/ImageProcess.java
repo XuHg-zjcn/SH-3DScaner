@@ -36,8 +36,12 @@ public class ImageProcess {
         int N_length;
         int N_thread;
     }
+    public static class Status {
+        long process_time;
+    }
     public static native void jni_init(init_para para, Bitmap bmp_out);
     public static native void update(ByteBuffer img_in);
     public static native void frame_hist2d(long matAddrOld, long matAddrNew, long matHist);
-    public static native void OptFlow_LK(long matAddr);
+    public static native void OptFlow_init(int rows, int cols);
+    public static native void OptFlow_LK(long matAddr, Status status);
 }

@@ -35,14 +35,18 @@ inline void point_f2i(Point2f &point_float, Point2i &point_int) {
     point_int.y = cvRound(point_float.y);
 }
 
-void OptFlow::update(Mat &img)
+long OptFlow::update(Mat &img)
 {
+    timespec ts0{}, ts1{};
     cvtColor(img, gray->next(), COLOR_RGBA2GRAY);
+
+    clock_gettime(CLOCK_REALTIME, &ts0);
     calcOpticalFlowPyrLK((*gray)[-1], (*gray)[0],
             point[gray->i], point[!gray->i],
             status, err,
             Size(11, 11),
             4, criteria);
+    clock_gettime(CLOCK_REALTIME, &ts1);
 
     int m = min(point[0].size(), point[1].size());
     Point2i point_int[2];
@@ -51,4 +55,5 @@ void OptFlow::update(Mat &img)
         point_f2i(point[1][i], point_int[1]);
         line(img, point_int[0], point_int[1], color, 1, LINE_AA);
     }
+    return ts1.tv_nsec - ts0.tv_nsec;
 }
