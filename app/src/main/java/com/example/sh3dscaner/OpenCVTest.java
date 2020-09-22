@@ -41,8 +41,7 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean              mIsJavaCamera = true;
     private MenuItem             mItemSwitchCamera = null;
-    private Mat img_old, img_new;
-    private Mat hist2d;
+    private Mat img_rgb;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -105,23 +104,16 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     }
 
     public void onCameraViewStarted(int width, int height) {
-        img_old = new Mat(height, width, CvType.CV_8UC4);
-        img_new = new Mat(height, width, CvType.CV_8UC4);
-        hist2d = new Mat(256, 256, CvType.CV_16UC4);
+        img_rgb = new Mat(height, width, CvType.CV_8UC4);
     }
 
     public void onCameraViewStopped() {
-        img_old.release();
-        img_new.release();
-        hist2d.release();
+        img_rgb.release();
     }
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        img_new =  inputFrame.rgba();
-        ImageProcess.frame_hist2d(img_old.getNativeObjAddr(),
-                                  img_new.getNativeObjAddr(),
-                                  hist2d.getNativeObjAddr());
-        img_old = img_new;
-        return img_new;
+        img_rgb = inputFrame.rgba();
+        ImageProcess.OptFlow_LK(img_rgb.getNativeObjAddr());
+        return img_rgb;
     }
 }

@@ -39,4 +39,5 @@ public class ImageProcess {
     public static native void jni_init(init_para para, Bitmap bmp_out);
     public static native void update(ByteBuffer img_in);
     public static native void frame_hist2d(long matAddrOld, long matAddrNew, long matHist);
+    public static native void OptFlow_LK(long matAddr);
 }
