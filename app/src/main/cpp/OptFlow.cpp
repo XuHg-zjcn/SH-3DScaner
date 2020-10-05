@@ -45,7 +45,7 @@ long OptFlow::update(Mat &img)
             point[gray->i], point[!gray->i],
             status, err,
             Size(11, 11),
-            4, criteria);
+            3, criteria);
     clock_gettime(CLOCK_REALTIME, &ts1);
 
     int m = min(point[0].size(), point[1].size());

@@ -155,7 +155,7 @@ Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz,
     if(N_frames%30 == 0)
         optflow->getFeat(mat);
     else{
-        t_ns=optflow->update(mat);
+        t_ns = optflow->update(mat);
         env->SetLongField(status, id, t_ns);
     }
     N_frames += 1;
