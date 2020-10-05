@@ -17,14 +17,21 @@
 #include <string>
 #include <pthread.h>
 #include "ImageProcess.h"
+#include "OptFlow.h"
 #include <android/bitmap.h>
 #include <mutex>
-
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <ctime>
+using namespace cv;
+using namespace std;
 array2d<uint8_t> *img; //相机照片
 array2d<uint8_t> *tmp; //lines_search结果
 array2d<uint32_t> *bmp;    //输出窗口
 uint32_t *bmp_ptr;
 line_search_para *ls_para;
+int N_frames=0;   //processed frames已处理帧数
+OptFlow *optflow;
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_sh3dscaner_ImageProcess_update(JNIEnv *env, jclass thiz, jobject img_in) {
@@ -81,4 +88,75 @@ Java_com_example_sh3dscaner_ImageProcess_jni_1init(JNIEnv *env, jclass thiz, job
                                    int_range{0, static_cast<uint32_t>(n_line)},   //N_line
                                    static_cast<uint32_t>(n_length)};                      //N_length
     init(n_thread, ls_para, in_width, in_height);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_sh3dscaner_ImageProcess_frame_1hist2d(JNIEnv *env, jclass clazz,
+                jlong mat_addr_old, jlong mat_addr_new, jlong mat_hist) {
+    Mat& img_old = *(Mat*)mat_addr_old;
+    Mat& img_new = *(Mat*)mat_addr_new;
+    Mat& out_hist= *(Mat*)mat_hist;
+    int total_pix = img_new.cols * img_new.rows;
+    uchar *p_old = img_old.ptr();
+    uchar *p_new = img_new.ptr();
+    ushort *p_hist= out_hist.ptr<ushort>();
+    ushort *p_hist_end = p_hist + out_hist.cols*out_hist.rows*out_hist.channels();
+    while(p_hist < p_hist_end) {
+        *p_hist = 0;
+        p_hist++;
+    }
+    p_hist = out_hist.ptr<ushort>();
+    for(int i=0;i<total_pix;i++) {
+        for(int j=0;j<3;j++) {
+            *(p_hist + (*p_old)*0x100*4 + (*p_new)*4 + j) += 1;
+            p_new++;
+            p_old++;
+        }
+        p_new++;
+        p_old++;
+    }
+
+    // TODO remove the codes under, add a view to show hist2d
+    p_new = img_new.ptr();
+    int p_new_row  =  img_new.cols * img_new.channels();
+    int p_new_col  = img_new.channels();
+    int p_hist_row = out_hist.cols *out_hist.channels();
+    int p_hist_col = out_hist.channels();
+    int bias_new, bias_hist;
+    assert(p_hist_row < p_new_row);
+    for(int i=0;i<out_hist.rows;i++) {
+        /*memcpy(p_new + p_new_row_bias*i,      //the code is u8 to u8, now is u16 to u8
+               p_hist + p_hist_row_bias*i,
+               sizeof(uchar)*p_hist_row_bias);*/
+        for(int j=0;j<out_hist.cols;j++) {
+            bias_new  =  p_new_row*i +  p_new_col*j;
+            bias_hist = p_hist_row*i + p_hist_col*j;
+            *(p_new + bias_new + 0) = (*(p_hist + bias_hist + 0))>>2U;
+            *(p_new + bias_new + 1) = (*(p_hist + bias_hist + 1))>>2U;
+            *(p_new + bias_new + 2) = (*(p_hist + bias_hist + 2))>>2U;
+        }
+    }
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_sh3dscaner_ImageProcess_OptFlow_1init(JNIEnv *env, jclass clazz,
+            jint rows, jint cols) {
+    optflow = new OptFlow(rows, cols);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz,
+        jlong mat_addr, jobject status) {
+    long t_ns;
+    jfieldID id;
+    jclass c = env->FindClass("com/example/sh3dscaner/ImageProcess$Status");
+    id = env->GetFieldID(c, "process_time", "J");
+    Mat& mat = *(Mat*)mat_addr;
+    if(N_frames%30 == 0)
+        optflow->getFeat(mat);
+    else{
+        t_ns = optflow->update(mat);
+        env->SetLongField(status, id, t_ns);
+    }
+    N_frames += 1;
 }
