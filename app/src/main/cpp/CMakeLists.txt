@@ -10,6 +10,10 @@ set(OpenCV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../sdk/native/jni)
 find_package(OpenCV REQUIRED)
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
+set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../FFTW_Install)
+set(FFTW3_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../fftw-3.3.8)
+add_subdirectory(${FFTW3_DIR} ${CMAKE_CURRENT_BINARY_DIR}/fftw_build)
+include_directories(${FFTW3_DIR}/api)
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
@@ -24,7 +28,8 @@ add_library( # Sets the name of the library.
              # Provides a relative path to your source file(s).
              native-lib.cpp
              ImageProcess.cpp
-             OptFlow.cpp)
+             OptFlow.cpp
+             optflow_FFT.cpp)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -47,6 +52,7 @@ target_link_libraries( # Specifies the target library.
                        native-lib
                        jnigraphics
                        ${OpenCV_LIBRARIES}
+                       fftw3
                        # Links the target library to the log library
                        # included in the NDK.
                        ${log-lib} )
