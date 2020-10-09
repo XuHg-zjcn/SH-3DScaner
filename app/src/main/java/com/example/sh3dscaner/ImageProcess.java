@@ -17,12 +17,15 @@ package com.example.sh3dscaner;
 import android.graphics.Bitmap;
 import android.util.Size;
 
+import org.opencv.core.Mat;
+
 import java.nio.ByteBuffer;
 
 public class ImageProcess {
     static {
         System.loadLibrary("native-lib");
         System.loadLibrary("opencv_java4");
+        System.loadLibrary("fftw3");
     }
     public static class init_para {
         int in_width;
@@ -44,4 +47,6 @@ public class ImageProcess {
     public static native void frame_hist2d(long matAddrOld, long matAddrNew, long matHist);
     public static native void OptFlow_init(int rows, int cols);
     public static native void OptFlow_LK(long matAddr, Status status);
+    public static native void optflow_FFT_init(int out_n, Bitmap fft_bmp);
+    public static native void optflow_FFT_update(long matAddr, Status status);
 }

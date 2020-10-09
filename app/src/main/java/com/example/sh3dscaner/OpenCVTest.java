@@ -26,17 +26,23 @@ import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import static com.example.sh3dscaner.ImageProcess.*;
 
@@ -48,9 +54,16 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     private boolean              mIsJavaCamera = true;
     private MenuItem             mItemSwitchCamera = null;
     private Mat img_rgb;
+    private Bitmap bmp;
     private String pt_str;
     private Status imp_status = new Status();
     private int N_frames=0;
+    private Semaphore mSemp = new Semaphore(1);
+    private TextureView fft_view;
+    private Rect mRect;
+    private Paint mPaint;
+    private boolean draw_thread_is_running=true;
+    private Thread thread_draw;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -60,6 +73,24 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
                 mOpenCvCameraView.enableView();
             } else {
                 super.onManagerConnected(status);
+            }
+        }
+    };
+
+    Runnable draw_bmp  = new Runnable() {
+        @Override
+        public void run() {
+            while(draw_thread_is_running) {
+                try {
+                    mSemp.acquire();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Canvas mCanvas = fft_view.lockCanvas();
+                if(mCanvas != null) {
+                    mCanvas.drawBitmap(bmp, null, mRect, mPaint);
+                    fft_view.unlockCanvasAndPost(mCanvas);
+                }
             }
         }
     };
@@ -76,6 +107,7 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.opencv_test);
         mOpenCvCameraView = findViewById(R.id.tutorial1_activity_java_surface_view);
+        fft_view = findViewById(R.id.fft_view);
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         ProcessTime_TextView = findViewById(R.id.process_time);
@@ -114,8 +146,14 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     }
 
     public void onCameraViewStarted(int width, int height) {
-        OptFlow_init(height, width);
+        //OptFlow_init(height, width);
         img_rgb = new Mat(height, width, CvType.CV_8UC4);
+        bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888); //创建与输出尺寸相同的Bitmap
+        optflow_FFT_init(64, bmp);
+        mRect = new Rect(0,0, bmp.getWidth(), bmp.getHeight());
+        mPaint = new Paint();
+        thread_draw = new Thread(draw_bmp);
+        thread_draw.start();
     }
 
     public void onCameraViewStopped() {
@@ -124,7 +162,16 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
         img_rgb = inputFrame.rgba();
-        OptFlow_LK(img_rgb.getNativeObjAddr(), imp_status);
+
+        //OptFlow_LK(img_rgb.getNativeObjAddr(), imp_status);
+        optflow_FFT_update(img_rgb.getNativeObjAddr(), imp_status);
+
+        if (mSemp.availablePermits() == 0) {
+            mSemp.release();
+        }else{
+            Log.e(TAG, "mSemp.availablePermits() != 0");
+        }
+
         if(N_frames%30 == 1) {
             double pt = imp_status.process_time / 1e9;
             pt_str = String.format("proc% 4.1fms, use% 4.1f%%",

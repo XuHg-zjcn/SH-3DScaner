@@ -46,7 +46,7 @@ int optflow_FFT::save()
 {
     FILE *fp;
     fp = fopen("wisdom.fftw", "w");
-    if(fp==NULL){
+    if(fp == nullptr){
         return 1;
     }
     fftw_export_wisdom_to_file(fp);
@@ -79,7 +79,7 @@ void optflow_FFT::calc_delta()
     fftw_execute(p_ifft);
 }
 
-void optflow_FFT::copy_result(uint8_t* p)
+void optflow_FFT::copy_result(uint32_t* p)
 {
     double abs_v;
     for(uint32_t i=0;i<64*64;i++) {
@@ -87,14 +87,13 @@ void optflow_FFT::copy_result(uint8_t* p)
         abs_v += 32;
         abs_v = abs_v<0   ?   0 : abs_v;
         abs_v = abs_v>255 ? 255 : abs_v;
-        *p++ = (uint8_t)abs_v;
+        *p++ = ((uint8_t)abs_v*0x00010101) + 0xff000000;
     }
     /*for(uint32_t i=0;i<64*33;i++) {
-        abs_v = mul[i][0];
-        abs_v = abs_v/4 + 128;
+        abs_v = mul[i][1];
+        abs_v = abs_v*128 + 128;
         abs_v = abs_v<0   ?   0 : abs_v;
         abs_v = abs_v>255 ? 255 : abs_v;
-        cout<<abs_v<<endl;
-        *p++ = (uint8_t)abs_v;
+        *p++ = ((uint8_t)abs_v*0x00010101) + 0xff000000;
     }*/
 }

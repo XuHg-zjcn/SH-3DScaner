@@ -13,13 +13,20 @@
         opencv:show_fps="true"
         opencv:camera_id="any" />
 
+    <android.view.TextureView
+        android:id="@+id/fft_view"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true" />
+
     <TextView
         android:id="@+id/process_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/process_time_unk"
         android:textColor="@color/process_time_text"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentBottom="true"/>
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"/>
 
 </RelativeLayout>

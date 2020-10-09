@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include "ImageProcess.h"
 #include "OptFlow.h"
+#include "optflow_FFT.h"
 #include <android/bitmap.h>
 #include <mutex>
 #include <opencv2/core.hpp>
@@ -29,9 +30,14 @@ array2d<uint8_t> *img; //相机照片
 array2d<uint8_t> *tmp; //lines_search结果
 array2d<uint32_t> *bmp;    //输出窗口
 uint32_t *bmp_ptr;
+uint32_t *p_fft_bmp;
 line_search_para *ls_para;
 int N_frames=0;   //processed frames已处理帧数
 OptFlow *optflow;
+optflow_FFT *OF_fft;
+Scalar color = Scalar(0,50,200);
+Point2i point_int[4];
+bool AB=true;
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_sh3dscaner_ImageProcess_update(JNIEnv *env, jclass thiz, jobject img_in) {
@@ -159,4 +165,52 @@ Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz,
         env->SetLongField(status, id, t_ns);
     }
     N_frames += 1;
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass clazz,
+        jint out_n, jobject fft_bmp) {
+    AndroidBitmapInfo bmpInfo = AndroidBitmapInfo{0};
+    OF_fft = new optflow_FFT(64);
+    AndroidBitmap_getInfo(env, fft_bmp, &bmpInfo);
+    AndroidBitmap_lockPixels(env, fft_bmp, (void**)&p_fft_bmp);
+
+    point_int[0].x=320;
+    point_int[0].y=160;
+    point_int[1].x=320+64;
+    point_int[1].y=160;
+    point_int[2].x=320+64;
+    point_int[2].y=160+64;
+    point_int[3].x=320;
+    point_int[3].y=160+64;
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1update(JNIEnv *env, jclass clazz,
+                                                              jlong mat_addr, jobject status) {
+    timespec ts0{}, ts1{};
+    Mat& mat = *(Mat*)mat_addr;
+    Mat gray;
+    jfieldID id;
+    jclass c = env->FindClass("com/example/sh3dscaner/ImageProcess$Status");
+    id = env->GetFieldID(c, "process_time", "J");
+    cvtColor(mat, gray, COLOR_RGBA2GRAY);
+    OF_fft->fill_data(gray, 320, 160);
+    clock_gettime(CLOCK_REALTIME, &ts0);
+    if(AB){
+        OF_fft->run(0);
+    }
+    else{
+        OF_fft->run(1);
+        OF_fft->calc_delta();
+        OF_fft->copy_result(p_fft_bmp);
+    }
+    clock_gettime(CLOCK_REALTIME, &ts1);
+    AB =! AB;
+    long t_ns = ts1.tv_nsec - ts0.tv_nsec;
+    env->SetLongField(status, id, t_ns);
+    line(mat, point_int[0], point_int[1], color, 1, LINE_4);
+    line(mat, point_int[1], point_int[2], color, 1, LINE_4);
+    line(mat, point_int[2], point_int[3], color, 1, LINE_4);
+    line(mat, point_int[3], point_int[0], color, 1, LINE_4);
 }
