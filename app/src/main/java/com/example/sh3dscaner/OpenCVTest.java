@@ -43,6 +43,7 @@ import android.widget.Toast;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import org.opencv.android.Utils;
 
 import static com.example.sh3dscaner.ImageProcess.*;
 
@@ -54,6 +55,7 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     private boolean              mIsJavaCamera = true;
     private MenuItem             mItemSwitchCamera = null;
     private Mat img_rgb;
+    private Mat out_mat;
     private Bitmap bmp;
     private String pt_str;
     private Status imp_status = new Status();
@@ -148,8 +150,9 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
     public void onCameraViewStarted(int width, int height) {
         //OptFlow_init(height, width);
         img_rgb = new Mat(height, width, CvType.CV_8UC4);
+        out_mat = new Mat(64,64, CvType.CV_8UC1);
         bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888); //创建与输出尺寸相同的Bitmap
-        optflow_FFT_init(64, bmp);
+        optflow_FFT_init(64);
         mRect = new Rect(0,0, bmp.getWidth(), bmp.getHeight());
         mPaint = new Paint();
         thread_draw = new Thread(draw_bmp);
@@ -164,8 +167,8 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
         img_rgb = inputFrame.rgba();
 
         //OptFlow_LK(img_rgb.getNativeObjAddr(), imp_status);
-        optflow_FFT_update(img_rgb.getNativeObjAddr(), imp_status);
-
+        optflow_FFT_update(img_rgb.getNativeObjAddr(), out_mat.getNativeObjAddr(), imp_status);
+        Utils.matToBitmap(out_mat, bmp);
         if (mSemp.availablePermits() == 0) {
             mSemp.release();
         }else{

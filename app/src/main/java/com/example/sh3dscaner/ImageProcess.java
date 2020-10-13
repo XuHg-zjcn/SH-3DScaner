@@ -47,6 +47,6 @@ public class ImageProcess {
     public static native void frame_hist2d(long matAddrOld, long matAddrNew, long matHist);
     public static native void OptFlow_init(int rows, int cols);
     public static native void OptFlow_LK(long matAddr, Status status);
-    public static native void optflow_FFT_init(int out_n, Bitmap fft_bmp);
-    public static native void optflow_FFT_update(long matAddr, Status status);
+    public static native void optflow_FFT_init(int out_n);
+    public static native void optflow_FFT_update(long matAddr, long outMat, Status status);
 }

@@ -30,14 +30,13 @@ array2d<uint8_t> *img; //相机照片
 array2d<uint8_t> *tmp; //lines_search结果
 array2d<uint32_t> *bmp;    //输出窗口
 uint32_t *bmp_ptr;
-uint32_t *p_fft_bmp;
 line_search_para *ls_para;
 int N_frames=0;   //processed frames已处理帧数
 OptFlow *optflow;
 optflow_FFT *OF_fft;
-Scalar color = Scalar(0,50,200);
 Point2i point_int[4];
 bool AB=true;
+uint32_t p_fft_bmp;
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_sh3dscaner_ImageProcess_update(JNIEnv *env, jclass thiz, jobject img_in) {
@@ -168,12 +167,8 @@ Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz,
 }
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass clazz,
-        jint out_n, jobject fft_bmp) {
-    AndroidBitmapInfo bmpInfo = AndroidBitmapInfo{0};
+Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass clazz, jint out_n) {
     OF_fft = new optflow_FFT(64);
-    AndroidBitmap_getInfo(env, fft_bmp, &bmpInfo);
-    AndroidBitmap_lockPixels(env, fft_bmp, (void**)&p_fft_bmp);
 
     point_int[0].x=320;
     point_int[0].y=160;
@@ -187,10 +182,12 @@ Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1update(JNIEnv *env, jclass clazz,
-                                                              jlong mat_addr, jobject status) {
+               jlong mat_addr, jlong out_mat, jobject status) {
+    Scalar color = Scalar(0, 50, 200);
     timespec ts0{}, ts1{};
     Mat& mat = *(Mat*)mat_addr;
     Mat gray;
+    Mat& omat = *(Mat*)out_mat;
     jfieldID id;
     jclass c = env->FindClass("com/example/sh3dscaner/ImageProcess$Status");
     id = env->GetFieldID(c, "process_time", "J");
@@ -203,7 +200,7 @@ Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1update(JNIEnv *env, jclas
     else{
         OF_fft->run(1);
         OF_fft->calc_delta();
-        OF_fft->copy_result(p_fft_bmp);
+        OF_fft->copy_zoom(8, omat);
     }
     clock_gettime(CLOCK_REALTIME, &ts1);
     AB =! AB;

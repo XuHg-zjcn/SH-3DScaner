@@ -2,8 +2,10 @@
 // Created by xrj on 20-10-5.
 //
 
+#include <opencv2/imgproc.hpp>
 #include "optflow_FFT.h"
 #include "fftw3.h"
+
 optflow_FFT::optflow_FFT(uint32_t n)
 {
     //ctor
@@ -22,6 +24,7 @@ optflow_FFT::optflow_FFT(uint32_t n)
         p2 = fftw_plan_dft_r2c_2d(n, n, crop_db, out2, FFTW_PATIENT);
         p_ifft = fftw_plan_dft_c2r_2d(n, n, mul, ifft, FFTW_PATIENT);
     }
+    show_u8.create(n, n, CV_8UC1);
 }
 
 optflow_FFT::~optflow_FFT()
@@ -79,15 +82,35 @@ void optflow_FFT::calc_delta()
     fftw_execute(p_ifft);
 }
 
-void optflow_FFT::copy_result(uint32_t* p)
+// @para width: show width in orignal image
+// @para out: Mat to save zoomed image
+// zoom rate=out.size/width
+void optflow_FFT::copy_zoom(int width, Mat out)
+{
+    copy_result();
+    Mat Mtemp;
+    /*Rect area1 = Rect(0,                  0,                  width, width);
+    Rect area2 = Rect(show_u8.cols-width, 0,                  width, width);
+    Rect area3 = Rect(show_u8.cols-width, show_u8.rows-width, width, width);
+    Rect area4 = Rect(0,                  show_u8.rows-width, width, width);*/
+    Rect area = Rect(0,0, width,width);
+    Mtemp = show_u8(area);
+    resize(Mtemp, out, Size(),
+           (double)out.cols/width, (double)out.rows/width,
+           INTER_NEAREST);
+}
+
+void optflow_FFT::copy_result()
 {
     double abs_v;
+    uint8_t *p = show_u8.ptr();
     for(uint32_t i=0;i<64*64;i++) {
         abs_v = ifft[i]/20;
         abs_v += 32;
         abs_v = abs_v<0   ?   0 : abs_v;
         abs_v = abs_v>255 ? 255 : abs_v;
-        *p++ = ((uint8_t)abs_v*0x00010101) + 0xff000000;
+        *p++ = (uint8_t)abs_v;
+        //*p++ = ((uint8_t)abs_v*0x00010101) + 0xff000000;
     }
     /*for(uint32_t i=0;i<64*33;i++) {
         abs_v = mul[i][1];

@@ -18,7 +18,8 @@ class optflow_FFT
         void run(uint32_t n);
         void fill_data(Mat &in, uint32_t x0, uint32_t y0);
         void calc_delta();
-        void copy_result(uint32_t* p);
+        void copy_zoom(int width, Mat out);
+        void copy_result();
 
     protected:
         int save();
@@ -33,6 +34,7 @@ class optflow_FFT
         fftw_complex *out2;
         fftw_complex *mul;
         double *ifft;
+        Mat show_u8;
 };
 
 
