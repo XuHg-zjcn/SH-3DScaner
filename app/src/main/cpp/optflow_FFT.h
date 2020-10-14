@@ -19,7 +19,8 @@ class optflow_FFT
         void fill_data(Mat &in, uint32_t x0, uint32_t y0);
         void calc_delta();
         void copy_zoom(int width, Mat out);
-        void copy_result();
+        void xsum(double dx, double dy, fftw_complex &ret);
+        void copy_result(Mat out);
 
     protected:
         int save();

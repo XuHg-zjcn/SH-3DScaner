@@ -152,7 +152,7 @@ public class OpenCVTest extends CameraActivity implements CvCameraViewListener2 
         img_rgb = new Mat(height, width, CvType.CV_8UC4);
         out_mat = new Mat(64,64, CvType.CV_8UC1);
         bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888); //创建与输出尺寸相同的Bitmap
-        optflow_FFT_init(64);
+        optflow_FFT_init(64, (width-64)/2, (height-64)/2);
         mRect = new Rect(0,0, bmp.getWidth(), bmp.getHeight());
         mPaint = new Paint();
         thread_draw = new Thread(draw_bmp);

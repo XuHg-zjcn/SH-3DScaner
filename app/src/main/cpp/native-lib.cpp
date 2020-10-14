@@ -104,7 +104,7 @@ Java_com_example_sh3dscaner_ImageProcess_frame_1hist2d(JNIEnv *env, jclass clazz
     int total_pix = img_new.cols * img_new.rows;
     uchar *p_old = img_old.ptr();
     uchar *p_new = img_new.ptr();
-    ushort *p_hist= out_hist.ptr<ushort>();
+    auto *p_hist= out_hist.ptr<ushort>();
     ushort *p_hist_end = p_hist + out_hist.cols*out_hist.rows*out_hist.channels();
     while(p_hist < p_hist_end) {
         *p_hist = 0;
@@ -167,17 +167,18 @@ Java_com_example_sh3dscaner_ImageProcess_OptFlow_1LK(JNIEnv *env, jclass clazz,
 }
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass clazz, jint out_n) {
+Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass clazz, jint out_n,
+                                                            jint x0, jint y0) {
     OF_fft = new optflow_FFT(64);
 
-    point_int[0].x=320;
-    point_int[0].y=160;
-    point_int[1].x=320+64;
-    point_int[1].y=160;
-    point_int[2].x=320+64;
-    point_int[2].y=160+64;
-    point_int[3].x=320;
-    point_int[3].y=160+64;
+    point_int[0].x=x0;
+    point_int[0].y=y0;
+    point_int[1].x=x0+64;
+    point_int[1].y=y0;
+    point_int[2].x=x0+64;
+    point_int[2].y=y0+64;
+    point_int[3].x=x0;
+    point_int[3].y=y0+64;
 }
 extern "C"
 JNIEXPORT void JNICALL
@@ -192,7 +193,7 @@ Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1update(JNIEnv *env, jclas
     jclass c = env->FindClass("com/example/sh3dscaner/ImageProcess$Status");
     id = env->GetFieldID(c, "process_time", "J");
     cvtColor(mat, gray, COLOR_RGBA2GRAY);
-    OF_fft->fill_data(gray, 320, 160);
+    OF_fft->fill_data(gray, point_int[0].x, point_int[0].y);
     clock_gettime(CLOCK_REALTIME, &ts0);
     if(AB){
         OF_fft->run(0);
@@ -200,7 +201,8 @@ Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1update(JNIEnv *env, jclas
     else{
         OF_fft->run(1);
         OF_fft->calc_delta();
-        OF_fft->copy_zoom(8, omat);
+        OF_fft->copy_zoom(16, omat);
+        //OF_fft->copy_result(omat);
     }
     clock_gettime(CLOCK_REALTIME, &ts1);
     AB =! AB;
