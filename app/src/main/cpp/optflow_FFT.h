@@ -19,7 +19,7 @@ class optflow_FFT
         void fill_data(Mat &in, uint32_t x0, uint32_t y0);
         void calc_delta();
         void copy_zoom(int width, Mat out);
-        void xsum(double dx, double dy, fftw_complex &ret);
+        void xsum(float dx, float dy, fftwf_complex &ret);
         void copy_result(Mat out);
 
     protected:
@@ -27,14 +27,14 @@ class optflow_FFT
 
     private:
         uint32_t n=0;
-        fftw_plan p1;
-        fftw_plan p2;
-        fftw_plan p_ifft;
-        double *crop_db;
-        fftw_complex *out1;
-        fftw_complex *out2;
-        fftw_complex *mul;
-        double *ifft;
+        fftwf_plan p1;
+        fftwf_plan p2;
+        fftwf_plan p_ifft;
+        float *crop_db;
+        fftwf_complex *out1;
+        fftwf_complex *out2;
+        fftwf_complex *mul;
+        float *ifft;
         Mat show_u8;
 };
 
