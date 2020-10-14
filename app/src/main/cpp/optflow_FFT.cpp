@@ -25,9 +25,9 @@ optflow_FFT::optflow_FFT(uint32_t n)
         p2 = fftwf_plan_dft_r2c_2d(n, n, crop_db, out2, FFTW_WISDOM_ONLY);
         p_ifft = fftwf_plan_dft_c2r_2d(n, n, mul, ifft, FFTW_WISDOM_ONLY);
     }else{
-        p1 = fftwf_plan_dft_r2c_2d(n, n, crop_db, out1, FFTW_PATIENT);
-        p2 = fftwf_plan_dft_r2c_2d(n, n, crop_db, out2, FFTW_PATIENT);
-        p_ifft = fftwf_plan_dft_c2r_2d(n, n, mul, ifft, FFTW_PATIENT);
+        p1 = fftwf_plan_dft_r2c_2d(n, n, crop_db, out1, FFTW_ESTIMATE);
+        p2 = fftwf_plan_dft_r2c_2d(n, n, crop_db, out2, FFTW_ESTIMATE);
+        p_ifft = fftwf_plan_dft_c2r_2d(n, n, mul, ifft, FFTW_ESTIMATE);
     }
     show_u8.create(16, 16, CV_8UC1);
 }
