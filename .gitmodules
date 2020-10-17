@@ -1,0 +1,3 @@
+[submodule "SH-3DScaner-linux"]
+	path = SH-3DScaner-linux
+	url = https://github.com/XuHg-zjcn/SH-3DScaner-linux.git
