@@ -19,6 +19,9 @@ include_directories(${FFTW3_DIR}/api)
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
+set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../SH-3DScaner-linux)
+include_directories(${CORE_DIR}/include)
+
 add_library( # Sets the name of the library.
              native-lib
 
@@ -29,7 +32,7 @@ add_library( # Sets the name of the library.
              native-lib.cpp
              ImageProcess.cpp
              OptFlow.cpp
-             optflow_FFT.cpp)
+             ${CORE_DIR}/src/optflow_FFT.cpp)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
