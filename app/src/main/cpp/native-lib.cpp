@@ -37,7 +37,9 @@ optflow_FFT *OF_fft;
 Point2i point_int[4];
 bool AB=true;
 uint32_t p_fft_bmp;
+Mat fill64;
 Mat small;
+Rect small_croper;
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_sh3dscaner_ImageProcess_update(JNIEnv *env, jclass thiz, jobject img_in) {
@@ -181,7 +183,8 @@ Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1init(JNIEnv *env, jclass 
     point_int[3].x=x0;
     point_int[3].y=y0+64;
 
-    small.create(16, 16, CV_8UC1);
+    fill64.create(64, 64, CV_8UC1);
+    small_croper = Rect(0, 0, 16, 16);
 }
 extern "C"
 JNIEXPORT void JNICALL
@@ -203,11 +206,15 @@ Java_com_example_sh3dscaner_ImageProcess_optflow_1FFT_1update(JNIEnv *env, jclas
     }
     else{
         OF_fft->run(1);
-        OF_fft->calc_delta();
+        OF_fft->calc_delta(false);
+        //OF_fft->copy_mul(&fill64);
+        //fill64.copyTo(omat(small_croper));
         OF_fft->run(2);
-        OF_fft->out_ifft(&small);
+        OF_fft->out_ifft(&fill64);
+
+        small = fill64(small_croper);
         resize(small, omat, Size(),
-               omat.cols/small.cols, omat.rows/small.rows,
+               (double)omat.cols/small.cols, (double)omat.rows/small.rows,
                INTER_NEAREST);
         //OF_fft->copy_result(omat);
     }

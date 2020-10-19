@@ -19,7 +19,9 @@ include_directories(${FFTW3_DIR}/api)
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
+add_definitions(-D USE_SINGLE)
 set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../SH-3DScaner-linux)
+find_package(3DScaner-core REQUIRED)
 include_directories(${CORE_DIR}/include)
 
 add_library( # Sets the name of the library.
