@@ -20,9 +20,10 @@ include_directories(${FFTW3_DIR}/api)
 # Gradle automatically packages shared libraries with your APK.
 
 add_definitions(-D USE_SINGLE)
-set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../SH-3DScaner-linux)
-find_package(3DScaner-core REQUIRED)
-include_directories(${CORE_DIR}/include)
+set(3DScanner-core_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../3DScanner-core)
+add_subdirectory(${3DScanner-core_DIR} ${3DScanner-core_DIR}/build)
+find_package(3DScanner-core REQUIRED)
+include_directories(${3DScanner-core_DIR}/include)
 
 add_library( # Sets the name of the library.
              native-lib
@@ -33,8 +34,7 @@ add_library( # Sets the name of the library.
              # Provides a relative path to your source file(s).
              native-lib.cpp
              ImageProcess.cpp
-             OptFlow.cpp
-             ${CORE_DIR}/src/optflow_FFT.cpp)
+             OptFlow.cpp)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
