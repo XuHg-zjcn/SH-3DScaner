@@ -1,3 +1,5 @@
+
+
 # SH-3DScaner 3D扫描仪
 ## DIY Laser 3D Scaner, request list:
 name               |  para  |description
@@ -20,12 +22,12 @@ I'm can not draw PCB, so I use buyed ready-made boards
 我不会画PCB，暂时用网上买到的现成的板和模块
 
 ## the process pseudo-code: 流程伪代码(Python)
-``````````````````````````````````````````````````````````python
+``````````````````````````````````````````````python
 while(!Get_all_line_in_camera_scope):
     if(i%num == 0):             #turn-off LD to calibration img0, every some frames
         img0 = cam.get_image()
         continue
-    LD.light_pulse()            #duty 10-30%, make higher SNR, backgroud darkness
+    LD.light_pulse()            #duty 10-30%, make higher SNR, background darkness
     img1 = cam.get_image()      #sync shutter during pulse, shutter time 1/300-1/100s
     step_motor.run_a_step()
     img2 = img1 - img0          #use IMU and Optflow to align image
@@ -34,7 +36,7 @@ while(!Get_all_line_in_camera_scope):
     distance=calc(line)         #calc distance between object and camera
     i+=1
 reconstruction_3D_model()
-``````````````````````````````````````````````````````````
+``````````````````````````````````````````````
 
 the LD duty can't too little, because image sensor is rolling shutter. if flash time less, the valid image window will narrow.  
-激光二极管的占空比不能太小，因为图像传感器是卷帘快门。如果闪光时间太短，有效的图像窗口会变窄。  
+激光二极管的占空比不能太小，因为图像传感器是卷帘快门。如果闪光时间太短，有效的图像窗口会变窄。
